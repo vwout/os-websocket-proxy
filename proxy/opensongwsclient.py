@@ -21,7 +21,6 @@ class OpenSongWsClient:
             self._response_callbacks.remove(callback)
 
     async def _response_callback(self, response: str, resource: str = None, action: str = None, identifier: str = None):
-        print("calling response callbacks")
         for callback in self._response_callbacks:
             try:
                 await callback(response, resource, action, identifier)
@@ -54,7 +53,10 @@ class OpenSongWsClient:
         while not self._shutdown:
             try:
                 async with websockets.connect(uri) as websocket:
-                    asyncio.get_event_loop().create_task(self._ws_subscribe(websocket, "presentation"))
+                    # Request OpenSong subscription, delayed to ensure proper initialization
+                    subscribe_future = lambda: asyncio.ensure_future(
+                        self._ws_subscribe(websocket, "presentation"))
+                    asyncio.get_event_loop().call_later(5, subscribe_future)
 
                     while not self._shutdown:
                         data = await websocket.recv()
@@ -76,9 +78,7 @@ class OpenSongWsClient:
 
                                     cb_future = lambda: asyncio.ensure_future(
                                         self._response_callback(data, resource, action, identifier))
-
-                                    # Request OpenSong subscription, delayed to ensure proper initialization
-                                    asyncio.get_event_loop().call_later(5, cb_future)
+                                    asyncio.get_event_loop().call_soon(cb_future)
 
                             else:
                                 if data == "OK":
