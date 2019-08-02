@@ -20,11 +20,11 @@ class OpenSongWsClient:
         if callback in self._response_callbacks:
             self._response_callbacks.remove(callback)
 
-    async def _response_callback(self, response: str):
+    async def _response_callback(self, response: str, resource: str = None, action: str = None, identifier: str = None):
         print("calling response callbacks")
         for callback in self._response_callbacks:
             try:
-                await callback(response)
+                await callback(response, resource, action, identifier)
             except:
                 pass
 
@@ -61,15 +61,21 @@ class OpenSongWsClient:
 
                         if type(data) is str:
                             self.config.logger.debug("received str: %s" % data)
-                            if data[:5] == '<?xml':
+                            if data[:5] == "<?xml":
                                 try:
-                                    xml = Et.fromstring(data)
+                                    xml_root = Et.fromstring(data)
                                 except:
-                                    xml = None
+                                    xml_root = None
                                     self.config.logger.debug("Failed to parse message from OpenSong:", data)
 
-                                if xml:
-                                    cb_future = lambda: asyncio.ensure_future(self._response_callback(data))
+                                if xml_root:
+                                    # xml_root object is <response> node
+                                    resource = xml_root.get("resource")
+                                    action = xml_root.get("action")
+                                    identifier = xml_root.get("identifier")
+
+                                    cb_future = lambda: asyncio.ensure_future(
+                                        self._response_callback(data, resource, action, identifier))
 
                                     # Request OpenSong subscription, delayed to ensure proper initialization
                                     asyncio.get_event_loop().call_later(5, cb_future)
@@ -80,6 +86,7 @@ class OpenSongWsClient:
                                     pass
                                 else:
                                     self.config.logger.debug("Not parsing: {}".format(data))
+
                         elif type(data) is bytes:
                             self.config.logger.debug("Received image")
                             cb_future = lambda: asyncio.ensure_future(self._image_callback(data))
