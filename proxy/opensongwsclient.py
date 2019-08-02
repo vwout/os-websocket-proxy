@@ -45,9 +45,8 @@ class OpenSongWsClient:
 
     @staticmethod
     async def _ws_subscribe(websocket: websockets.WebSocketClientProtocol, identifier: str):
-        url = "/ws/subscribe/%s" % identifier
-        await asyncio.sleep(5)  # Perform OpenSong subscription delayed
-        await websocket.send(url)
+        resource = "/ws/subscribe/%s" % identifier
+        await websocket.send(resource)
 
     async def run(self):
         uri = "ws://%s:%d/ws" % (self.config.opensong_host, self.config.opensong_port)
@@ -71,7 +70,9 @@ class OpenSongWsClient:
 
                                 if xml:
                                     cb_future = lambda: asyncio.ensure_future(self._response_callback(data))
-                                    asyncio.get_event_loop().call_soon(cb_future)
+
+                                    # Request OpenSong subscription, delayed to ensure proper initialization
+                                    asyncio.get_event_loop().call_later(5, cb_future)
 
                             else:
                                 if data == "OK":
