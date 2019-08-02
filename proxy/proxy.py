@@ -8,9 +8,9 @@ from .proxyconfig import ProxyConfig
 def main():
     arg_parser = argparse.ArgumentParser(description='OpenSong WebSocket Proxy.',
                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    arg_parser.add_argument("--host", default=ProxyConfig.default_proxy_host,
+    arg_parser.add_argument("--proxy-host", default=ProxyConfig.default_proxy_host,
                             help='Address to run this proxy at')
-    arg_parser.add_argument("--port", default=ProxyConfig.default_proxy_port, type=int,
+    arg_parser.add_argument("--proxy-port", default=ProxyConfig.default_proxy_port, type=int,
                             help='Port the proxy accepts requests on')
     arg_parser.add_argument("--opensong-host", default=ProxyConfig.default_opensong_host,
                             help='Address of the OpenSong application')
@@ -20,10 +20,10 @@ def main():
 
     config = ProxyConfig()
 
-    if args.host and args.host is not ProxyConfig.default_proxy_host:
-        config.proxyhost = args.host
-    if args.port and args.port is not ProxyConfig.default_proxy_port:
-        config.proxy_port = args.port
+    if args.proxy_host and args.proxy_host is not ProxyConfig.default_proxy_host:
+        config.proxyhost = args.proxy_host
+    if args.proxy_port and args.proxy_port is not ProxyConfig.default_proxy_port:
+        config.proxy_port = args.proxy_port
     if args.opensong_host and args.opensong_host is not ProxyConfig.default_opensong_host:
         config.opensong_host = args.opensong_host
     if args.opensong_port and args.opensong_port is not ProxyConfig.default_opensong_port:
@@ -35,9 +35,9 @@ def main():
     loop = asyncio.get_event_loop()
 
     loop.create_task(client.run())
-    print("started client")
+    print("Started client, connecting to OpenSong at %s:%d" % (config.opensong_host, config.opensong_port))
     loop.run_until_complete(server.run())
-    print("started server")
+    print("Started server, accepting connections at %s:%d" % (config.proxy_host, config.proxy_port))
 
     async def _nop():
         while True:
