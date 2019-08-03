@@ -1,12 +1,14 @@
 import asyncio
 import xml.etree.ElementTree as Et
 import websockets
+from typing import Optional
 from .proxyconfig import ProxyConfig
 
 
 class OpenSongWsClient:
     def __init__(self, config: ProxyConfig):
         self.config = config
+        self._websocket: Optional[websockets.WebSocketClientProtocol] = None
         self._shutdown = False
         self._response_callbacks = []
         self._image_callbacks = []
@@ -53,14 +55,13 @@ class OpenSongWsClient:
         while not self._shutdown:
             try:
                 async with websockets.connect(uri) as websocket:
+                    self._websocket = websocket
                     # Request OpenSong subscription, delayed to ensure proper initialization
                     subscribe_future = lambda: asyncio.ensure_future(
                         self._ws_subscribe(websocket, "presentation"))
                     asyncio.get_event_loop().call_later(5, subscribe_future)
 
-                    while not self._shutdown:
-                        data = await websocket.recv()
-
+                    async for data in websocket:
                         if type(data) is str:
                             self.config.logger.debug("received str: %s" % data)
                             if data[:5] == "<?xml":
@@ -92,11 +93,19 @@ class OpenSongWsClient:
                             cb_future = lambda: asyncio.ensure_future(self._image_callback(data))
                             asyncio.get_event_loop().call_soon(cb_future)
 
+                        if self._shutdown:
+                            break
+
+                    self._websocket = None
+
             except Exception as e:
                 if isinstance(e, SystemExit):
                     self._shutdown = True
                 else:
-                    self.config.logger.error("Websocket connection caused a failure: %s" % str(e))
+                    self.config.logger.error("Websocket connection caused a failure (%s): %s" %
+                                             (type(e).__name__, str(e)))
+            finally:
+                self._websocket = None
 
             if not self._shutdown:
                 self.config.logger.info("Waiting to (re)connect to OpenSong at %s ..." % uri)
@@ -104,3 +113,5 @@ class OpenSongWsClient:
 
     def stop(self):
         self._shutdown = True
+        if self._websocket:
+            self._websocket.close()
