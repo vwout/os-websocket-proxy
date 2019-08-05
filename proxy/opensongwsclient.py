@@ -45,9 +45,15 @@ class OpenSongWsClient:
                 pass
 
     @staticmethod
-    async def _ws_subscribe(websocket: websockets.WebSocketClientProtocol, identifier: str):
+    def _websocket_send(websocket: websockets.WebSocketClientProtocol, resource: str, delay: int = 0):
+        send_future = lambda: asyncio.ensure_future(websocket.send(resource))
+        asyncio.get_event_loop().call_later(delay, send_future)
+        return True
+
+    @classmethod
+    def _ws_subscribe(cls, websocket: websockets.WebSocketClientProtocol, identifier: str, delay: int = 0):
         resource = "/ws/subscribe/%s" % identifier
-        await websocket.send(resource)
+        cls._websocket_send(websocket, resource, delay)
 
     async def run(self):
         uri = "ws://%s:%d/ws" % (self.config.opensong_host, self.config.opensong_port)
@@ -57,9 +63,7 @@ class OpenSongWsClient:
                 async with websockets.connect(uri) as websocket:
                     self._websocket = websocket
                     # Request OpenSong subscription, delayed to ensure proper initialization
-                    subscribe_future = lambda: asyncio.ensure_future(
-                        self._ws_subscribe(websocket, "presentation"))
-                    asyncio.get_event_loop().call_later(5, subscribe_future)
+                    self._ws_subscribe(websocket, "presentation", 5)
 
                     async for data in websocket:
                         if type(data) is str:
@@ -109,14 +113,11 @@ class OpenSongWsClient:
 
             if not self._shutdown:
                 self.config.logger.info("Waiting to (re)connect to OpenSong at %s ..." % uri)
-                await asyncio.sleep(5)
+                # await asyncio.sleep(5)
 
     async def request_resource(self, resource: str) -> bool:
         if self._websocket:
-            # todo: send data via asyncio.call_soon
-            # todo: create one central method for all websocket send requests
-            await self._websocket.send(resource)
-            return True
+            return self._websocket_send(self._websocket, resource)
         else:
             return False
 
