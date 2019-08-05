@@ -8,6 +8,7 @@ from .proxyconfig import ProxyConfig
 class OpenSongWsClient:
     def __init__(self, config: ProxyConfig):
         self.config = config
+        self.reconnect_delay: int = 0
         self._websocket: Optional[websockets.WebSocketClientProtocol] = None
         self._shutdown = False
         self._response_callbacks = []
@@ -113,7 +114,8 @@ class OpenSongWsClient:
 
             if not self._shutdown:
                 self.config.logger.info("Waiting to (re)connect to OpenSong at %s ..." % uri)
-                # await asyncio.sleep(5)
+                if self.reconnect_delay:
+                    await asyncio.sleep(self.reconnect_delay)
 
     async def request_resource(self, resource: str) -> bool:
         if self._websocket:
