@@ -111,6 +111,15 @@ class OpenSongWsClient:
                 self.config.logger.info("Waiting to (re)connect to OpenSong at %s ..." % uri)
                 await asyncio.sleep(5)
 
+    async def request_resource(self, resource: str) -> bool:
+        if self._websocket:
+            # todo: send data via asyncio.call_soon
+            # todo: create one central method for all websocket send requests
+            await self._websocket.send(resource)
+            return True
+        else:
+            return False
+
     def stop(self):
         self._shutdown = True
         if self._websocket:
