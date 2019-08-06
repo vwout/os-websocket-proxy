@@ -1,15 +1,15 @@
-from proxy.endpoint import Endpoint
+from proxy.opensongendpoint import OpenSongEndpoint
 
 
 def test_endpoint_url_empty():
-    endpoint = Endpoint(url=None)
+    endpoint = OpenSongEndpoint(url=None)
     assert endpoint.resource is None
     assert endpoint.action is None
     assert endpoint.identifier is None
 
 
 def test_endpoint_resource():
-    endpoint = Endpoint("/presentation")
+    endpoint = OpenSongEndpoint(url="/presentation")
     assert endpoint.resource == "presentation"
     assert endpoint.action is None
     assert endpoint.identifier is None
@@ -20,7 +20,7 @@ def test_endpoint_resource():
 
 
 def test_endpoint_resource_and_action():
-    endpoint = Endpoint("/presentation/slide")
+    endpoint = OpenSongEndpoint(url="/presentation/slide")
     assert endpoint.resource == "presentation"
     assert endpoint.action == "slide"
     assert endpoint.identifier is None
@@ -31,7 +31,7 @@ def test_endpoint_resource_and_action():
 
 
 def test_endpoint_resource_action_ident():
-    endpoint = Endpoint("/presentation/slide/list")
+    endpoint = OpenSongEndpoint(url="/presentation/slide/list")
     assert endpoint.resource == "presentation"
     assert endpoint.action == "slide"
     assert endpoint.identifier == "list"
@@ -42,7 +42,7 @@ def test_endpoint_resource_action_ident():
 
 
 def test_endpoint_resource_action_anyident():
-    endpoint = Endpoint("/presentation/slide/*")
+    endpoint = OpenSongEndpoint(url="/presentation/slide/*")
     assert endpoint.resource == "presentation"
     assert endpoint.action == "slide"
     assert endpoint.identifier == "*"
