@@ -17,6 +17,8 @@ class OpenSongWsClient:
         self._shutdown = False
         self._response_callbacks: List = []
         self._image_callbacks: List = []
+
+        # FIFO array of requests awaiting a response from OpenSong
         self._pending_requests: OrderedDict[OpenSongEndpoint, int] = OrderedDict()
         self._response_cache = OpenSongResponseCache()
 
@@ -72,6 +74,27 @@ class OpenSongWsClient:
             del self._pending_requests[endpoint]
         self._pending_requests[endpoint] = int(time.time())
 
+    def _get_pending_request(self, binary: bool = False,
+                             resource: str = None, action: str = None, identifier: str = None):
+        endpoint = None
+        if not binary:
+            endpoint = OpenSongEndpoint(url=None, resource=resource, action=action,
+                                        identifier=identifier)
+            for ep in self._pending_requests.keys():
+                if not ep.expect_binary_response() and \
+                        ep.matches_endpoint(resource, action, identifier):
+                    endpoint = ep
+                    del self._pending_requests[ep]
+                    break
+        else:
+            for ep in self._pending_requests.keys():
+                if ep.expect_binary_response():
+                    endpoint = ep
+                    del self._pending_requests[ep]
+                    break
+
+        return endpoint
+
     def _schedule_websocket_send(self, websocket: websockets.WebSocketClientProtocol, endpoint: OpenSongEndpoint,
                                  delay: int = 0, add_pending_request: bool = True):
         if add_pending_request:
@@ -110,16 +133,7 @@ class OpenSongWsClient:
                                     action = xml_root.get("action")
                                     identifier = xml_root.get("identifier")
 
-                                    endpoint = OpenSongEndpoint(url=None, resource=resource, action=action,
-                                                                identifier=identifier)
-                                    for ep in reversed(self._pending_requests.keys()):
-                                        if ep.expect_binary_response():
-                                            continue
-                                        elif ep.matches_endpoint(resource, action, identifier):
-                                            endpoint = ep
-                                            del self._pending_requests[ep]
-                                            break
-
+                                    endpoint = self._get_pending_request(False, resource, action, identifier)
                                     self.config.logger.debug("Received data for endpoint '%s'" %
                                                              endpoint.url if endpoint else "unknown")
                                     self._schedule_response_callback(endpoint, data)
@@ -131,12 +145,7 @@ class OpenSongWsClient:
                                     self.config.logger.debug("Not parsing: {}".format(data))
 
                         elif type(data) is bytes:
-                            for ep in reversed(self._pending_requests.keys()):
-                                if ep.expect_binary_response():
-                                    endpoint = ep
-                                    del self._pending_requests[ep]
-                                    break
-
+                            endpoint = self._get_pending_request(binary=True)
                             self.config.logger.debug("Received image for endpoint '%s'" %
                                                      endpoint.url if endpoint else "unknown")
                             self._schedule_response_callback(endpoint, data)
