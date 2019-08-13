@@ -21,7 +21,7 @@ def main():
     config = ProxyConfig()
 
     if args.proxy_host and args.proxy_host is not ProxyConfig.default_proxy_host:
-        config.proxyhost = args.proxy_host
+        config.proxy_host = args.proxy_host
     if args.proxy_port and args.proxy_port is not ProxyConfig.default_proxy_port:
         config.proxy_port = args.proxy_port
     if args.opensong_host and args.opensong_host is not ProxyConfig.default_opensong_host:
