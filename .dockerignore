@@ -1,0 +1,14 @@
+htmlcov
+dist
+build
+
+tests
+venv
+
+.*
+*.pyc
+*.*.pyc
+__pycache__
+
+readme.md
+setup.cfg
