@@ -75,8 +75,9 @@ class OpenSongWsConnection:
             # Ignore the response for this connection
             pass
 
-    def resource_supported(self, ep: OpenSongEndpoint) -> bool:
-        return any(aep.matches_endpoint(ep.resource, ep.action, ep.identifier) for aep in self._allowed_endpoints)
+    @classmethod
+    def resource_supported(cls, ep: OpenSongEndpoint) -> bool:
+        return any(aep.matches_endpoint(ep.resource, ep.action, ep.identifier) for aep in cls._allowed_endpoints)
 
     async def process_request(self, resource: str, client: OpenSongWsClient):
         supported = False
